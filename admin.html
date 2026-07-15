@@ -40,7 +40,11 @@
 
     <div class="admin-app" id="adminApp" style="display:none;">
 
-        <aside class="admin-sidebar">
+        <button class="admin-menu-btn" id="adminMenuBtn">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <aside class="admin-sidebar" id="adminSidebar">
 
             <div class="admin-logo">🟨 Umar Brend <span>Admin</span></div>
 
@@ -322,6 +326,8 @@
 
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
     <script src="adminScript.js"></script>
 
