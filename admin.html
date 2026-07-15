@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Umar Brend</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="adminStyle.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- ================= LOGIN ================= -->
+
+    <div class="admin-login" id="adminLogin">
+
+        <form class="login-box" id="loginForm">
+
+            <h2>🔐 Admin Panel</h2>
+            <p>Umar Brend boshqaruv paneliga xush kelibsiz</p>
+
+            <input type="password" id="loginPassword" placeholder="Parolni kiriting" required>
+
+            <button type="submit" class="btn btn-gold">Kirish</button>
+
+            <span class="login-error" id="loginError">Parol noto'g'ri</span>
+
+        </form>
+
+    </div>
+
+    <!-- ================= ADMIN APP ================= -->
+
+    <div class="admin-app" id="adminApp" style="display:none;">
+
+        <aside class="admin-sidebar">
+
+            <div class="admin-logo">🟨 Umar Brend <span>Admin</span></div>
+
+            <nav class="admin-nav">
+                <button class="admin-nav-btn active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </button>
+                <button class="admin-nav-btn" data-tab="products">
+                    <i class="fa-solid fa-shoe-prints"></i> Mahsulotlar
+                </button>
+                <button class="admin-nav-btn" data-tab="stats">
+                    <i class="fa-solid fa-chart-pie"></i> Statistika
+                </button>
+                <a class="admin-nav-btn" href="index.html" target="_blank">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Saytni ko'rish
+                </a>
+                <button class="admin-nav-btn logout" id="logoutBtn">
+                    <i class="fa-solid fa-right-from-bracket"></i> Chiqish
+                </button>
+            </nav>
+
+        </aside>
+
+        <main class="admin-main">
+
+            <!-- ============ DASHBOARD ============ -->
+
+            <section class="admin-tab active" id="tab-dashboard">
+
+                <h1>Dashboard</h1>
+
+                <div class="stat-grid">
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                        <div>
+                            <span>Bugungi tushum</span>
+                            <strong id="statTodayRevenue">0 so'm</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <div>
+                            <span>Bugun sotilgan</span>
+                            <strong id="statTodaySold">0 ta</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <div>
+                            <span>Omborda qolgan</span>
+                            <strong id="statStock">0 ta</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-eye"></i>
+                        <div>
+                            <span>Ko'rilganlar</span>
+                            <strong id="statViews">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-heart"></i>
+                        <div>
+                            <span>Eng ko'p yoqtirilgan</span>
+                            <strong id="statTopLiked">—</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card warning">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div>
+                            <span>Kam qolgan mahsulotlar</span>
+                            <strong id="statLowStock">0 ta</strong>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="admin-panel">
+                    <h3>⚠ Kam qolgan mahsulotlar ro'yxati</h3>
+                    <div id="lowStockList" class="low-stock-list"></div>
+                </div>
+
+            </section>
+
+            <!-- ============ PRODUCTS ============ -->
+
+            <section class="admin-tab" id="tab-products">
+
+                <div class="admin-tab-head">
+                    <h1>Mahsulotlar</h1>
+                    <button class="btn btn-gold" id="addProductBtn">
+                        <i class="fa-solid fa-plus"></i> Mahsulot qo'shish
+                    </button>
+                </div>
+
+                <div class="product-table" id="productTable"></div>
+
+            </section>
+
+            <!-- ============ STATS ============ -->
+
+            <section class="admin-tab" id="tab-stats">
+
+                <h1>Statistika</h1>
+
+                <div class="stat-grid stat-grid-3">
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <div>
+                            <span>Bugungi tushum</span>
+                            <strong id="revToday">0 so'm</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-calendar-week"></i>
+                        <div>
+                            <span>Shu hafta</span>
+                            <strong id="revWeek">0 so'm</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <i class="fa-solid fa-calendar"></i>
+                        <div>
+                            <span>Shu oy</span>
+                            <strong id="revMonth">0 so'm</strong>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="admin-panel-grid">
+
+                    <div class="admin-panel">
+                        <h3>🏆 Eng ko'p sotilgan</h3>
+                        <div id="topSold" class="rank-list"></div>
+                    </div>
+
+                    <div class="admin-panel">
+                        <h3>👁 Eng ko'p ko'rilgan</h3>
+                        <div id="topViewed" class="rank-list"></div>
+                    </div>
+
+                    <div class="admin-panel">
+                        <h3>❤️ Eng ko'p like</h3>
+                        <div id="topLiked" class="rank-list"></div>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- ================= PRODUCT FORM MODAL ================= -->
+
+    <div class="admin-modal" id="productModal">
+
+        <div class="admin-modal-overlay" id="productModalOverlay"></div>
+
+        <div class="admin-modal-box">
+
+            <button class="admin-modal-close" id="closeProductModal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h3 id="productModalTitle">Mahsulot qo'shish</h3>
+
+            <form id="productForm">
+
+                <input type="hidden" id="pf_id">
+
+                <label>Nomi</label>
+                <input type="text" id="pf_name" required>
+
+                <div class="form-row">
+                    <div>
+                        <label>Narxi (so'm)</label>
+                        <input type="number" id="pf_price" required>
+                    </div>
+                    <div>
+                        <label>Eski narxi (ixtiyoriy)</label>
+                        <input type="number" id="pf_oldPrice">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div>
+                        <label>Kategoriya</label>
+                        <select id="pf_category">
+                            <option value="erkak">Erkaklar</option>
+                            <option value="ayol">Ayollar</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Belgi (badge)</label>
+                        <select id="pf_badge">
+                            <option value="Yangi">Yangi</option>
+                            <option value="Top">Top</option>
+                            <option value="Chegirma">Chegirma</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div>
+                        <label>Razmerlar (vergul bilan: 40,41,42)</label>
+                        <input type="text" id="pf_sizes" placeholder="39,40,41,42" required>
+                    </div>
+                    <div>
+                        <label>Qolgan soni</label>
+                        <input type="number" id="pf_stock" required>
+                    </div>
+                </div>
+
+                <label>Tavsifi</label>
+                <textarea id="pf_description" rows="3"></textarea>
+
+                <label>Asosiy rasm</label>
+                <input type="file" id="pf_mainImage" accept="image/*">
+                <div class="image-preview" id="pf_mainImagePreview"></div>
+
+                <label>Qo'shimcha rasmlar (bir nechta tanlash mumkin)</label>
+                <input type="file" id="pf_extraImages" accept="image/*" multiple>
+                <div class="image-preview" id="pf_extraImagesPreview"></div>
+
+                <button type="submit" class="btn btn-gold" style="width:100%;margin-top:20px;">
+                    Saqlash
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- ================= SOTILDI MODAL ================= -->
+
+    <div class="admin-modal" id="sellModal">
+
+        <div class="admin-modal-overlay" id="sellModalOverlay"></div>
+
+        <div class="admin-modal-box admin-modal-small">
+
+            <button class="admin-modal-close" id="closeSellModal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h3>Mahsulot sotildi</h3>
+            <p id="sellProductName" class="sell-product-name"></p>
+
+            <form id="sellForm">
+
+                <input type="hidden" id="sell_id">
+
+                <label>Nechta sotildi?</label>
+                <input type="number" id="sell_qty" min="1" value="1" required>
+
+                <label>Qancha narxda sotildi? (dona narxi)</label>
+                <input type="number" id="sell_price" required>
+
+                <button type="submit" class="btn btn-gold" style="width:100%;margin-top:16px;">
+                    Saqlash
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+    <script src="adminScript.js"></script>
+
+</body>
+
+</html>

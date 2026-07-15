@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mahsulot | Umar Brend</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body data-page="mahsulot">
+
+    <!-- ================= HEADER ================= -->
+
+    <header class="header">
+
+        <div class="container">
+
+            <a href="index.html" class="logo">
+                <img src="assets/logo/logo.png" alt="Umar Brend">
+            </a>
+
+            <nav class="navbar">
+                <a href="index.html">Bosh sahifa</a>
+                <a href="#">Erkaklar</a>
+                <a href="#">Ayollar</a>
+            </nav>
+
+            <div class="header-icons">
+
+                <button class="icon-btn" id="searchBtn">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+
+                <a class="icon-btn" href="sevimlilar.html" style="position:relative;">
+                    <i class="fa-regular fa-heart"></i>
+                    <span class="count-badge" id="favCount">0</span>
+                </a>
+
+                <button class="icon-btn" id="cartBtn" style="position:relative;">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="count-badge" id="cartCount">0</span>
+                </button>
+
+                <button class="icon-btn" id="themeBtn">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <!-- ================= PRODUCT DETAIL ================= -->
+
+    <section class="product-detail">
+
+        <div class="container">
+
+            <div class="detail-grid" id="detailRoot">
+                <!-- JS orqali to'ldiriladi -->
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer class="footer">
+
+        <div class="container">
+
+            <img src="assets/logo/logo.png" alt="Umar Brend">
+
+            <p>© 2026 Umar Brend. Barcha huquqlar himoyalangan.</p>
+
+            <div class="footer-links">
+                <a href="tel:+998901234567"><i class="fa-solid fa-phone"></i> +998 90 123 45 67</a>
+                <a href="https://t.me/umarbrend" target="_blank"><i class="fa-brands fa-telegram"></i> Telegram</a>
+                <a href="https://instagram.com/umarbrend" target="_blank"><i class="fa-brands fa-instagram"></i> Instagram</a>
+            </div>
+
+        </div>
+
+    </footer>
+
+    <!-- SEARCH MODAL -->
+
+    <div class="search-modal" id="searchModal">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Mahsulot qidirish...">
+            <button id="closeSearch"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+    <script>
+
+        (function () {
+
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+            const product = getProductById(id);
+            const root = document.getElementById("detailRoot");
+
+            if (!product) {
+
+                root.innerHTML = `
+                    <div class="empty-state" style="grid-column:1/-1;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <h3>Mahsulot topilmadi</h3>
+                        <p><a href="index.html" style="color:var(--gold);font-weight:600;">Bosh sahifaga qaytish</a></p>
+                    </div>
+                `;
+
+                return;
+
+            }
+
+            product.views = (product.views || 0) + 1;
+            saveProducts();
+
+            let selectedSize = product.sizes[0];
+            let qty = 1;
+
+            function oldPriceHtml() {
+
+                return product.oldPrice
+                    ? `<span class="detail-old-price">${product.oldPrice.toLocaleString()} so'm</span>`
+                    : "";
+
+            }
+
+            function sizesHtml() {
+
+                return product.sizes.map(size => `
+                    <button class="size-btn ${size === selectedSize ? "active" : ""}" data-size="${size}">
+                        ${size}
+                    </button>
+                `).join("");
+
+            }
+
+            function thumbsHtml() {
+
+                return product.images.map((img, i) => `
+                    <div class="detail-thumb ${i === 0 ? "active" : ""}" data-img="${img}">
+                        <img src="${img}" alt="${product.name} ${i + 1}">
+                    </div>
+                `).join("");
+
+            }
+
+            function render() {
+
+                root.innerHTML = `
+
+                    <div class="detail-gallery">
+                        <div class="detail-gallery-main">
+                            <img id="mainImage" src="${product.images[0]}" alt="${product.name}">
+                        </div>
+                        <div class="detail-thumbs">${thumbsHtml()}</div>
+                    </div>
+
+                    <div class="detail-info">
+
+                        <span class="detail-badge">${product.badge}</span>
+
+                        <h1>${product.name}</h1>
+
+                        <div>
+                            <span class="detail-price">${product.price.toLocaleString()} so'm</span>
+                            ${oldPriceHtml()}
+                        </div>
+
+                        <div class="detail-stock">🟢 Qolgan: ${product.stock} ta</div>
+
+                        <p class="detail-desc">${product.description}</p>
+
+                        <span class="size-label">Razmer tanlang</span>
+                        <div class="size-grid" id="sizeGrid">${sizesHtml()}</div>
+
+                        <span class="qty-label">Miqdor</span>
+                        <div class="detail-qty">
+                            <div class="qty-control">
+                                <button id="qtyMinus">-</button>
+                                <span id="qtyValue">${qty}</span>
+                                <button id="qtyPlus">+</button>
+                            </div>
+                        </div>
+
+                        <div class="detail-actions">
+
+                            <button class="like-btn detail-like" data-id="${product.id}">
+                                <i class="fa-regular fa-heart"></i>
+                            </button>
+
+                            <button class="btn btn-outline" id="addToCartBtn">
+                                <i class="fa-solid fa-cart-plus"></i> Savatchaga qo'shish
+                            </button>
+
+                            <button class="btn btn-gold" id="orderNowBtn">
+                                🛍 Buyurtma berish
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+                bindEvents();
+
+                // like-btn ni product-card kabi ko'rsatish uchun mock-data-id ota elementga qo'yildi
+                document.querySelector(".detail-like").closest(".detail-info").dataset.id = product.id;
+                initFavorites(document.querySelector(".detail-actions").parentElement);
+
+            }
+
+            function bindEvents() {
+
+                document.getElementById("mainImage") &&
+                document.querySelectorAll(".detail-thumb").forEach(thumb => {
+
+                    thumb.addEventListener("click", () => {
+                        document.getElementById("mainImage").src = thumb.dataset.img;
+                        document.querySelectorAll(".detail-thumb").forEach(t => t.classList.remove("active"));
+                        thumb.classList.add("active");
+                    });
+
+                });
+
+                document.querySelectorAll(".size-btn").forEach(btn => {
+
+                    btn.addEventListener("click", () => {
+                        selectedSize = Number(btn.dataset.size);
+                        document.querySelectorAll(".size-btn").forEach(b => b.classList.remove("active"));
+                        btn.classList.add("active");
+                    });
+
+                });
+
+                document.getElementById("qtyMinus").addEventListener("click", () => {
+                    if (qty > 1) qty--;
+                    document.getElementById("qtyValue").textContent = qty;
+                });
+
+                document.getElementById("qtyPlus").addEventListener("click", () => {
+                    if (qty < product.stock) qty++;
+                    document.getElementById("qtyValue").textContent = qty;
+                });
+
+                document.getElementById("addToCartBtn").addEventListener("click", () => {
+                    addToCart(product.id, selectedSize, qty);
+                });
+
+                document.getElementById("orderNowBtn").addEventListener("click", () => {
+                    addToCart(product.id, selectedSize, qty);
+                    openContactModal();
+                });
+
+            }
+
+            render();
+
+        })();
+
+    </script>
+
+</body>
+
+</html>
