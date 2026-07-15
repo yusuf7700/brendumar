@@ -635,6 +635,30 @@
    RESPONSIVE
 =========================== */
 
+.admin-menu-btn{
+
+    display:none;
+
+    position:fixed;
+    top:16px;
+    left:16px;
+    z-index:1002;
+
+    width:44px;
+    height:44px;
+
+    border-radius:12px;
+
+    background:var(--white);
+    box-shadow:var(--shadow);
+
+    align-items:center;
+    justify-content:center;
+
+    font-size:18px;
+
+}
+
 @media(max-width:900px){
 
     .admin-app{
@@ -643,24 +667,36 @@
 
     }
 
-    .admin-sidebar{
+    .admin-menu-btn{
 
-        width:100%;
-        height:auto;
-        position:relative;
+        display:flex;
 
     }
 
-    .admin-nav{
+    .admin-sidebar{
 
-        flex-direction:row;
-        overflow-x:auto;
+        position:fixed;
+        top:0;
+        left:0;
+        height:100vh;
+        width:260px;
+
+        transform:translateX(-100%);
+        transition:.3s;
+
+        z-index:1001;
+
+    }
+
+    .admin-sidebar.active{
+
+        transform:translateX(0);
 
     }
 
     .admin-main{
 
-        padding:24px 18px;
+        padding:80px 18px 24px;
 
     }
 
@@ -679,6 +715,34 @@
     }
 
     .stat-grid-3{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+@media(max-width:480px){
+
+    .product-row{
+
+        grid-template-columns:40px 1fr auto;
+
+    }
+
+    .product-row span:nth-child(3){
+
+        display:none;
+
+    }
+
+    .admin-modal-box{
+
+        padding:26px 20px;
+
+    }
+
+    .form-row{
 
         grid-template-columns:1fr;
 
