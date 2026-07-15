@@ -36,6 +36,10 @@
 
             <div class="header-icons">
 
+                <button class="menu-btn" id="menuBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
                 <button class="icon-btn" id="searchBtn">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </button>
@@ -98,16 +102,21 @@
 
     <div class="search-modal" id="searchModal">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Mahsulot qidirish...">
-            <button id="closeSearch"><i class="fa-solid fa-xmark"></i></button>
+            <div class="search-input-row">
+                <input type="text" id="searchInput" placeholder="Mahsulot qidirish...">
+                <button id="closeSearch"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="search-results" id="searchResults"></div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
 
     <script>
 
-        (function () {
+        document.addEventListener("productsReady", () => {
 
             const params = new URLSearchParams(window.location.search);
             const id = params.get("id");
@@ -128,8 +137,7 @@
 
             }
 
-            product.views = (product.views || 0) + 1;
-            saveProducts();
+            incrementProductViews(product);
 
             let selectedSize = product.sizes[0];
             let qty = 1;
@@ -274,7 +282,7 @@
 
             render();
 
-        })();
+        });
 
     </script>
 
