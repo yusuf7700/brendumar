@@ -374,120 +374,61 @@ window.addEventListener("load", () => {
 
 });
 // ======================================
-// UMAR BREND — MAHSULOTLAR MA'LUMOTLAR BAZASI
-// (localStorage orqali admin panel bilan bog'langan)
+// UMAR BREND — MAHSULOTLAR (SUPABASE)
 // ======================================
 
-const DEFAULT_PRODUCTS = [
-
-    {
-        id: 1,
-        name: "Nike Air Max",
-        price: 850000,
-        oldPrice: 950000,
-        stock: 6,
-        views: 284,
-        likes: 74,
-        sold: 18,
-        badge: "Yangi",
-        category: "erkak",
-        sizes: [39, 40, 41, 42, 43, 44],
-        image: "assets/products/shoe1.jpg",
-        images: [
-            "assets/products/shoe1.jpg",
-            "assets/products/shoe1.jpg",
-            "assets/products/shoe1.jpg"
-        ],
-        description: "Nike Air Max — kundalik kiyish uchun qulay va yengil krossovka. Yumshoq taglik, nafas oluvchi mato va zamonaviy dizayn premium darajadagi qulaylikni ta'minlaydi."
-    },
-
-    {
-        id: 2,
-        name: "Adidas Campus",
-        price: 790000,
-        oldPrice: 890000,
-        stock: 12,
-        views: 198,
-        likes: 51,
-        sold: 9,
-        badge: "Chegirma",
-        category: "erkak",
-        sizes: [40, 41, 42, 43, 44, 45],
-        image: "assets/products/shoe2.jpg",
-        images: [
-            "assets/products/shoe2.jpg",
-            "assets/products/shoe2.jpg",
-            "assets/products/shoe2.jpg"
-        ],
-        description: "Adidas Campus — klassik uslub va zamonaviy qulaylikni birlashtirgan model. Har kungi look uchun ideal tanlov."
-    },
-
-    {
-        id: 3,
-        name: "New Balance 530",
-        price: 930000,
-        oldPrice: 0,
-        stock: 4,
-        views: 341,
-        likes: 103,
-        sold: 27,
-        badge: "Top",
-        category: "ayol",
-        sizes: [36, 37, 38, 39, 40],
-        image: "assets/products/shoe3.jpg",
-        images: [
-            "assets/products/shoe3.jpg",
-            "assets/products/shoe3.jpg",
-            "assets/products/shoe3.jpg"
-        ],
-        description: "New Balance 530 — retro dizayn va yuqori sifatli materiallar bilan tayyorlangan, xaridorlar orasida eng ko'p tanlanayotgan model."
-    },
-
-    {
-        id: 4,
-        name: "Puma Smash",
-        price: 670000,
-        oldPrice: 760000,
-        stock: 9,
-        views: 174,
-        likes: 39,
-        sold: 6,
-        badge: "Yangi",
-        category: "ayol",
-        sizes: [36, 37, 38, 39, 40, 41],
-        image: "assets/products/shoe4.jpg",
-        images: [
-            "assets/products/shoe4.jpg",
-            "assets/products/shoe4.jpg",
-            "assets/products/shoe4.jpg"
-        ],
-        description: "Puma Smash — minimalistik dizayn va qulay taglik bilan har kuni kiyish uchun mos krossovka."
-    }
-
-];
+let products = [];
 
 
 // ==============================
-// MAHSULOTLARNI YUKLASH / SAQLASH
+// QATORNI (row) JS OBYEKTIGA O'GIRISH
 // ==============================
 
-function loadProducts() {
+function normalizeProduct(row) {
 
-    const stored = JSON.parse(localStorage.getItem("ub_products"));
-
-    if (stored && Array.isArray(stored) && stored.length) {
-        return stored;
-    }
-
-    localStorage.setItem("ub_products", JSON.stringify(DEFAULT_PRODUCTS));
-    return JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+    return {
+        id: row.id,
+        name: row.name,
+        price: Number(row.price),
+        oldPrice: Number(row.old_price) || 0,
+        stock: Number(row.stock),
+        views: Number(row.views) || 0,
+        likes: Number(row.likes) || 0,
+        sold: Number(row.sold) || 0,
+        badge: row.badge,
+        category: row.category,
+        sizes: row.sizes || [],
+        image: row.image,
+        images: row.images || [],
+        description: row.description || ""
+    };
 
 }
 
-let products = loadProducts();
 
-function saveProducts() {
-    localStorage.setItem("ub_products", JSON.stringify(products));
+// ==============================
+// MAHSULOTLARNI YUKLASH
+// ==============================
+
+async function loadProducts() {
+
+    const { data, error } = await sb
+        .from("products")
+        .select("*")
+        .order("id", { ascending: true });
+
+    if (error) {
+        console.error("Mahsulotlarni yuklashda xatolik:", error);
+        return [];
+    }
+
+    return data.map(normalizeProduct);
+
+}
+
+async function refreshProducts() {
+    products = await loadProducts();
+    return products;
 }
 
 function getProductById(id) {
@@ -499,26 +440,51 @@ function getProductById(id) {
 // SOTUVLAR JURNALI (Admin "Sotildi" uchun)
 // ==============================
 
-function getSales() {
-    return JSON.parse(localStorage.getItem("ub_sales")) || [];
+async function getSales() {
+
+    const { data, error } = await sb.from("sales").select("*");
+
+    if (error) {
+        console.error("Sotuvlarni yuklashda xatolik:", error);
+        return [];
+    }
+
+    return data.map(s => ({
+        productId: s.product_id,
+        qty: s.qty,
+        soldPrice: Number(s.sold_price),
+        date: s.created_at
+    }));
+
 }
 
-function saveSales(sales) {
-    localStorage.setItem("ub_sales", JSON.stringify(sales));
-}
+async function addSale(productId, qty, soldPrice) {
 
-function addSale(productId, qty, soldPrice) {
-
-    const sales = getSales();
-
-    sales.push({
-        productId: Number(productId),
+    const { error } = await sb.from("sales").insert({
+        product_id: Number(productId),
         qty: Number(qty),
-        soldPrice: Number(soldPrice),
-        date: new Date().toISOString()
+        sold_price: Number(soldPrice)
     });
 
-    saveSales(sales);
+    if (error) console.error("Sotuvni saqlashda xatolik:", error);
+
+}
+
+
+// ==============================
+// KO'RISHLAR SONINI OSHIRISH
+// ==============================
+
+async function incrementProductViews(product) {
+
+    product.views = (product.views || 0) + 1;
+
+    const { error } = await sb
+        .from("products")
+        .update({ views: product.views })
+        .eq("id", product.id);
+
+    if (error) console.error("Ko'rishlar sonini yangilashda xatolik:", error);
 
 }
 
@@ -535,39 +501,47 @@ function renderProducts(containerId, list) {
 
     container.innerHTML = "";
 
+    if (!list.length) {
+        container.innerHTML = `<p style="color:var(--gray);grid-column:1/-1;text-align:center;">Hozircha mahsulot yo'q</p>`;
+        return;
+    }
+
     list.forEach(product => {
         container.innerHTML += createProductCard(product);
     });
 
     if (window.initFavorites) initFavorites(container);
+
 }
 
 
 // ==============================
-// BO'LIMLARNI CHIQARISH (faqat mijoz sahifalarida mavjud bo'lsa)
+// MA'LUMOTLARNI YUKLASH VA TAYYORLASH
 // ==============================
 
-if (document.getElementById("popularProducts") ||
-    document.getElementById("newProducts") ||
-    document.getElementById("favoriteProducts")) {
+async function initProductsData() {
 
-    const popularList = [...products]
-        .sort((a, b) => b.views - a.views)
-        .slice(0, 4);
+    await refreshProducts();
 
-    const newList = [...products]
-        .sort((a, b) => b.id - a.id)
-        .slice(0, 4);
+    if (document.getElementById("popularProducts") ||
+        document.getElementById("newProducts") ||
+        document.getElementById("favoriteProducts")) {
 
-    const favoriteList = [...products]
-        .sort((a, b) => b.likes - a.likes)
-        .slice(0, 4);
+        const popularList = [...products].sort((a, b) => b.views - a.views).slice(0, 4);
+        const newList = [...products].sort((a, b) => b.id - a.id).slice(0, 4);
+        const favoriteList = [...products].sort((a, b) => b.likes - a.likes).slice(0, 4);
 
-    renderProducts("popularProducts", popularList);
-    renderProducts("newProducts", newList);
-    renderProducts("favoriteProducts", favoriteList);
+        renderProducts("popularProducts", popularList);
+        renderProducts("newProducts", newList);
+        renderProducts("favoriteProducts", favoriteList);
+
+    }
+
+    document.dispatchEvent(new CustomEvent("productsReady"));
 
 }
+
+initProductsData();
 // =====================================
 // SEARCH MODAL
 // =====================================
@@ -576,6 +550,7 @@ const searchBtn = document.getElementById("searchBtn");
 const searchModal = document.getElementById("searchModal");
 const closeSearch = document.getElementById("closeSearch");
 const searchInput = document.getElementById("searchInput");
+const searchResults = document.getElementById("searchResults");
 
 if (searchBtn) {
 
@@ -586,18 +561,21 @@ if (searchBtn) {
 
 }
 
+function closeSearchModal() {
+    if (!searchModal) return;
+    searchModal.classList.remove("active");
+    if (searchInput) searchInput.value = "";
+    if (searchResults) searchResults.innerHTML = "";
+}
+
 if (closeSearch) {
-
-    closeSearch.addEventListener("click", () => {
-        searchModal.classList.remove("active");
-    });
-
+    closeSearch.addEventListener("click", closeSearchModal);
 }
 
 window.addEventListener("click", (e) => {
 
     if (e.target === searchModal) {
-        searchModal.classList.remove("active");
+        closeSearchModal();
     }
 
 });
@@ -605,29 +583,75 @@ window.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
 
     if (e.key === "Escape") {
-        if (searchModal) searchModal.classList.remove("active");
+        closeSearchModal();
         const cartDrawer = document.getElementById("cartDrawer");
         if (cartDrawer) cartDrawer.classList.remove("active");
         const contactModal = document.getElementById("contactModal");
         if (contactModal) contactModal.classList.remove("active");
+        const navbar = document.querySelector(".navbar");
+        if (navbar) navbar.classList.remove("mobile-active");
     }
 
 });
 
-// Qidiruv — mahsulot nomi bo'yicha filtrlash (bosh sahifada mavjud bo'lsa)
-if (searchInput) {
+// Qidiruv — natijalarni modal ichida ro'yxat qilib ko'rsatadi
+if (searchInput && searchResults) {
 
     searchInput.addEventListener("input", () => {
 
         const term = searchInput.value.trim().toLowerCase();
-        if (!term || typeof products === "undefined") return;
 
-        const found = products.filter(p => p.name.toLowerCase().includes(term));
-
-        if (found.length && typeof renderProducts === "function") {
-            renderProducts("popularProducts", found);
+        if (!term) {
+            searchResults.innerHTML = "";
+            return;
         }
 
+        if (typeof products === "undefined" || !products.length) {
+            searchResults.innerHTML = `<p class="search-empty">Mahsulotlar hali yuklanmoqda...</p>`;
+            return;
+        }
+
+        const found = products.filter(p => p.name.toLowerCase().includes(term)).slice(0, 6);
+
+        searchResults.innerHTML = found.length
+            ? found.map(p => `
+                <a href="mahsulot.html?id=${p.id}" class="search-result-item">
+                    <img src="${p.image}" alt="${p.name}">
+                    <div>
+                        <h4>${p.name}</h4>
+                        <span>${p.price.toLocaleString()} so'm</span>
+                    </div>
+                </a>
+            `).join("")
+            : `<p class="search-empty">Hech narsa topilmadi</p>`;
+
+    });
+
+}
+
+
+// =====================================
+// MOBIL MENYU (HAMBURGER)
+// =====================================
+
+const menuBtn = document.getElementById("menuBtn");
+const navbar = document.querySelector(".navbar");
+
+if (menuBtn && navbar) {
+
+    menuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        navbar.classList.toggle("mobile-active");
+    });
+
+    navbar.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", () => navbar.classList.remove("mobile-active"));
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!navbar.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
+            navbar.classList.remove("mobile-active");
+        }
     });
 
 }
