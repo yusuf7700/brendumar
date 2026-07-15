@@ -1,5 +1,5 @@
 // ======================================
-// UMAR BREND — ADMIN PANEL
+// UMAR BREND — ADMIN PANEL (SUPABASE)
 // ======================================
 
 const ADMIN_PASSWORD = "umar2026"; // <-- shu yerda parolni o'zgartiring
@@ -50,6 +50,22 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 
 
 // ==============================
+// MOBIL SIDEBAR
+// ==============================
+
+const adminSidebar = document.getElementById("adminSidebar");
+const adminMenuBtn = document.getElementById("adminMenuBtn");
+
+if (adminMenuBtn) {
+
+    adminMenuBtn.addEventListener("click", () => {
+        adminSidebar.classList.toggle("active");
+    });
+
+}
+
+
+// ==============================
 // TABLAR
 // ==============================
 
@@ -66,6 +82,8 @@ document.querySelectorAll(".admin-nav-btn[data-tab]").forEach(btn => {
         if (btn.dataset.tab === "stats") renderStats();
         if (btn.dataset.tab === "products") renderProductTable();
         if (btn.dataset.tab === "dashboard") renderDashboard();
+
+        if (adminSidebar) adminSidebar.classList.remove("active");
 
     });
 
@@ -99,13 +117,12 @@ function isSameMonth(dateStr, ref) {
 // DASHBOARD
 // ==============================
 
-function renderDashboard() {
+async function renderDashboard() {
 
-    products = loadProducts();
+    await refreshProducts();
+    const sales = await getSales();
 
-    const sales = getSales();
     const today = new Date();
-
     const todaySales = sales.filter(s => isSameDay(s.date, today));
 
     const todayRevenue = todaySales.reduce((sum, s) => sum + s.qty * s.soldPrice, 0);
@@ -143,11 +160,23 @@ function renderDashboard() {
 // MAHSULOTLAR JADVALI
 // ==============================
 
-function renderProductTable() {
+async function renderProductTable() {
 
-    products = loadProducts();
+    await refreshProducts();
 
     const table = document.getElementById("productTable");
+
+    if (!products.length) {
+
+        table.innerHTML = `
+            <div style="padding:40px;text-align:center;color:var(--gray);">
+                Hozircha mahsulot yo'q. "Mahsulot qo'shish" tugmasi orqali birinchisini qo'shing.
+            </div>
+        `;
+
+        return;
+
+    }
 
     let html = `
         <div class="product-row head">
@@ -185,15 +214,19 @@ function renderProductTable() {
 
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
 
     if (!confirm("Ushbu mahsulotni o'chirmoqchimisiz?")) return;
 
-    products = products.filter(p => p.id !== id);
-    saveProducts();
+    const { error } = await sb.from("products").delete().eq("id", id);
 
-    renderProductTable();
-    renderDashboard();
+    if (error) {
+        alert("O'chirishda xatolik: " + error.message);
+        return;
+    }
+
+    await renderProductTable();
+    await renderDashboard();
 
 }
 
@@ -252,13 +285,26 @@ function renderImagePreviews() {
 
 }
 
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+
+// ==============================
+// RASM YUKLASH (Supabase Storage)
+// ==============================
+
+async function uploadImageToStorage(file) {
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `${Date.now()}-${safeName}`;
+
+    const { error } = await sb.storage.from("product-images").upload(path, file);
+
+    if (error) {
+        alert("Rasm yuklashda xatolik: " + error.message);
+        return null;
+    }
+
+    const { data } = sb.storage.from("product-images").getPublicUrl(path);
+    return data.publicUrl;
+
 }
 
 document.getElementById("pf_mainImage").addEventListener("change", async (e) => {
@@ -266,7 +312,12 @@ document.getElementById("pf_mainImage").addEventListener("change", async (e) => 
     const file = e.target.files[0];
     if (!file) return;
 
-    currentMainImage = await fileToBase64(file);
+    const label = e.target.nextElementSibling;
+    document.getElementById("pf_mainImagePreview").innerHTML = `<span style="font-size:13px;color:var(--gray);">Yuklanmoqda...</span>`;
+
+    const url = await uploadImageToStorage(file);
+    if (url) currentMainImage = url;
+
     renderImagePreviews();
 
 });
@@ -276,12 +327,22 @@ document.getElementById("pf_extraImages").addEventListener("change", async (e) =
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    currentExtraImages = await Promise.all(files.map(fileToBase64));
+    document.getElementById("pf_extraImagesPreview").innerHTML = `<span style="font-size:13px;color:var(--gray);">Yuklanmoqda...</span>`;
+
+    const urls = [];
+
+    for (const file of files) {
+        const url = await uploadImageToStorage(file);
+        if (url) urls.push(url);
+    }
+
+    if (urls.length) currentExtraImages = urls;
+
     renderImagePreviews();
 
 });
 
-productForm.addEventListener("submit", (e) => {
+productForm.addEventListener("submit", async (e) => {
 
     e.preventDefault();
 
@@ -298,7 +359,7 @@ productForm.addEventListener("submit", (e) => {
     const data = {
         name: document.getElementById("pf_name").value.trim(),
         price: Number(document.getElementById("pf_price").value),
-        oldPrice: Number(document.getElementById("pf_oldPrice").value) || 0,
+        old_price: Number(document.getElementById("pf_oldPrice").value) || 0,
         category: document.getElementById("pf_category").value,
         badge: document.getElementById("pf_badge").value,
         sizes,
@@ -308,29 +369,31 @@ productForm.addEventListener("submit", (e) => {
         images
     };
 
+    let error;
+
     if (id) {
 
-        const product = getProductById(id);
-        Object.assign(product, data);
+        ({ error } = await sb.from("products").update(data).eq("id", id));
 
     } else {
 
-        const newId = products.length ? Math.max(...products.map(p => p.id)) + 1 : 1;
-
-        products.push({
-            id: newId,
+        ({ error } = await sb.from("products").insert({
+            ...data,
             views: 0,
             likes: 0,
-            sold: 0,
-            ...data
-        });
+            sold: 0
+        }));
 
     }
 
-    saveProducts();
+    if (error) {
+        alert("Saqlashda xatolik: " + error.message);
+        return;
+    }
+
     closeProductForm();
-    renderProductTable();
-    renderDashboard();
+    await renderProductTable();
+    await renderDashboard();
 
 });
 
@@ -366,7 +429,7 @@ function closeSellModal() {
     sellModal.classList.remove("active");
 }
 
-sellForm.addEventListener("submit", (e) => {
+sellForm.addEventListener("submit", async (e) => {
 
     e.preventDefault();
 
@@ -382,15 +445,24 @@ sellForm.addEventListener("submit", (e) => {
         return;
     }
 
-    product.stock -= qty;
-    product.sold = (product.sold || 0) + qty;
+    const newStock = product.stock - qty;
+    const newSold = (product.sold || 0) + qty;
 
-    saveProducts();
-    addSale(id, qty, soldPrice);
+    const { error } = await sb
+        .from("products")
+        .update({ stock: newStock, sold: newSold })
+        .eq("id", id);
+
+    if (error) {
+        alert("Saqlashda xatolik: " + error.message);
+        return;
+    }
+
+    await addSale(id, qty, soldPrice);
 
     closeSellModal();
-    renderProductTable();
-    renderDashboard();
+    await renderProductTable();
+    await renderDashboard();
 
 });
 
@@ -399,11 +471,11 @@ sellForm.addEventListener("submit", (e) => {
 // STATISTIKA
 // ==============================
 
-function renderStats() {
+async function renderStats() {
 
-    products = loadProducts();
+    await refreshProducts();
+    const sales = await getSales();
 
-    const sales = getSales();
     const today = new Date();
 
     const revToday = sales.filter(s => isSameDay(s.date, today))
@@ -429,6 +501,11 @@ function renderRankList(containerId, list, field, suffix) {
 
     const container = document.getElementById(containerId);
 
+    if (!list.length) {
+        container.innerHTML = `<p class="empty-note">Hozircha ma'lumot yo'q</p>`;
+        return;
+    }
+
     container.innerHTML = list.slice(0, 5).map(p => `
         <div class="rank-item">
             <span>${p.name}</span>
@@ -443,10 +520,10 @@ function renderRankList(containerId, list, field, suffix) {
 // ISHGA TUSHIRISH
 // ==============================
 
-function refreshAll() {
-    renderDashboard();
-    renderProductTable();
-    renderStats();
+async function refreshAll() {
+    await renderDashboard();
+    await renderProductTable();
+    await renderStats();
 }
 
 checkAuth();
