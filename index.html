@@ -7,6 +7,24 @@
 
     <title>Umar Brend | Premium Oyoq Kiyimlar</title>
 
+    <meta name="description" content="Umar Brend — erkaklar va ayollar uchun premium, original oyoq kiyimlar. Yangi va mashhur modellar qulay narxlarda.">
+
+    <link rel="icon" type="image/png" href="assets/logo/logo.png">
+    <link rel="apple-touch-icon" href="assets/logo/logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#C9A227">
+
+    <meta property="og:title" content="Umar Brend | Premium Oyoq Kiyimlar">
+    <meta property="og:description" content="Erkaklar va ayollar uchun zamonaviy, sifatli va original oyoq kiyimlar.">
+    <meta property="og:image" content="https://umarbrend.vercel.app/assets/logo/logo.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://umarbrend.vercel.app/">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Umar Brend | Premium Oyoq Kiyimlar">
+    <meta name="twitter:description" content="Erkaklar va ayollar uchun zamonaviy, sifatli va original oyoq kiyimlar.">
+    <meta name="twitter:image" content="https://umarbrend.vercel.app/assets/logo/logo.png">
+
     <link rel="stylesheet" href="style.css">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +46,7 @@
         <div class="container">
 
             <a href="index.html" class="logo">
-                <img src="assets/logo/logo.jpg" alt="Umar Brend">
+                <img src="assets/logo/logo.png" alt="Umar Brend">
             </a>
 
             <nav class="navbar">
@@ -114,13 +132,13 @@
 
             <div class="hero-image">
 
-                <!-- Keyingi qismda banner rasmi qo'shiladi -->
-
-                <div class="image-placeholder">
+                <div class="image-placeholder" id="heroPlaceholder">
 
                     Banner Image
 
                 </div>
+
+                <img id="heroBannerImg" src="" alt="Umar Brend banner" class="hero-banner-img" style="display:none;">
 
             </div>
 
@@ -233,10 +251,18 @@
 
             </p>
 
+            <div class="footer-address" id="footerAddress" style="display:none;">
+                <i class="fa-solid fa-location-dot"></i>
+                <span id="footerAddressText"></span>
+            </div>
+
             <div class="footer-links">
                 <a href="tel:+998901234567"><i class="fa-solid fa-phone"></i> +998 90 123 45 67</a>
                 <a href="https://t.me/umarbrend" target="_blank"><i class="fa-brands fa-telegram"></i> Telegram</a>
                 <a href="https://instagram.com/umarbrend" target="_blank"><i class="fa-brands fa-instagram"></i> Instagram</a>
+                <a href="#" id="footerVideoLink" target="_blank" rel="noopener" style="display:none;">
+                    <i class="fa-solid fa-location-arrow"></i> Manzil videosi
+                </a>
             </div>
 
         </div>
