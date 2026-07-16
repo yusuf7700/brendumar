@@ -153,9 +153,9 @@ window.addEventListener("load", () => initFavorites());
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
 const CONTACT = {
-    telegram: "https://t.me/umarbrend",
-    instagram: "https://instagram.com/umarbrend",
-    phone: "+998901234567"
+    telegram: "https://t.me/brand_umar",
+    instagram: "https://instagram.com/umar.brend_",
+    phone: "+998946266816"
 };
 
 // --------------------------------------
