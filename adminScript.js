@@ -662,10 +662,13 @@ sellForm.addEventListener("submit", async (e) => {
 // STATISTIKA
 // ==============================
 
+let currentSales = [];
+
 async function renderStats() {
 
     await refreshProducts();
     const sales = await getSales();
+    currentSales = sales;
 
     const today = new Date();
 
@@ -685,6 +688,182 @@ async function renderStats() {
     renderRankList("topSold", [...products].sort((a, b) => (b.sold || 0) - (a.sold || 0)), "sold", "ta sotildi");
     renderRankList("topViewed", [...products].sort((a, b) => b.views - a.views), "views", "marta ko'rilgan");
     renderRankList("topLiked", [...products].sort((a, b) => b.likes - a.likes), "likes", "ta like");
+
+    renderSalesTable(sales);
+
+}
+
+function renderSalesTable(sales) {
+
+    const container = document.getElementById("salesTable");
+
+    if (!sales.length) {
+        container.innerHTML = `<p class="empty-note" style="padding:20px;">Hozircha sotuvlar yo'q</p>`;
+        return;
+    }
+
+    let html = `
+        <div class="sales-row head">
+            <span>Sana</span>
+            <span>Mahsulot</span>
+            <span>Soni</span>
+            <span>Narxi</span>
+            <span>Jami</span>
+            <span></span>
+        </div>
+    `;
+
+    html += sales.slice(0, 50).map(s => {
+
+        const product = getProductById(s.productId);
+        const name = product ? product.name : "(mahsulot o'chirilgan)";
+        const total = s.qty * s.soldPrice;
+        const dateStr = new Date(s.date).toLocaleDateString("uz-UZ");
+
+        return `
+            <div class="sales-row">
+                <span>${dateStr}</span>
+                <span>${name}</span>
+                <span>${s.qty} ta</span>
+                <span>${s.soldPrice.toLocaleString()} so'm</span>
+                <span>${total.toLocaleString()} so'm</span>
+                <div class="row-actions">
+                    <button class="edit-btn" onclick="openEditSaleModal(${s.id})" title="Tahrirlash">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="delete-btn" onclick="deleteSale(${s.id})" title="O'chirish">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+    }).join("");
+
+    container.innerHTML = html;
+
+}
+
+
+// ==============================
+// SOTUVNI TAHRIRLASH
+// ==============================
+
+const editSaleModal = document.getElementById("editSaleModal");
+const editSaleForm = document.getElementById("editSaleForm");
+
+document.getElementById("editSaleModalOverlay").addEventListener("click", closeEditSaleModal);
+document.getElementById("closeEditSaleModal").addEventListener("click", closeEditSaleModal);
+
+function openEditSaleModal(id) {
+
+    const sale = currentSales.find(s => s.id === id);
+    if (!sale) return;
+
+    const product = getProductById(sale.productId);
+
+    document.getElementById("es_id").value = sale.id;
+    document.getElementById("editSaleProductName").textContent =
+        product ? product.name : "Bu mahsulot o'chirilgan";
+
+    document.getElementById("es_qty").value = sale.qty;
+    document.getElementById("es_price").value = sale.soldPrice;
+
+    editSaleModal.classList.add("active");
+
+}
+
+function closeEditSaleModal() {
+    editSaleModal.classList.remove("active");
+}
+
+editSaleForm.addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    const id = Number(document.getElementById("es_id").value);
+    const newQty = Number(document.getElementById("es_qty").value);
+    const newPrice = Number(document.getElementById("es_price").value);
+
+    const sale = currentSales.find(s => s.id === id);
+    if (!sale) return;
+
+    const product = getProductById(sale.productId);
+
+    if (product) {
+
+        // avval eski sotuvning ta'sirini bekor qilamiz
+        const restoredStock = product.stock + sale.qty;
+        const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+
+        if (newQty > restoredStock) {
+            alert("Buncha ko'p mahsulot omborda yo'q edi. Maksimal: " + restoredStock);
+            return;
+        }
+
+        const finalStock = restoredStock - newQty;
+        const finalSold = restoredSold + newQty;
+
+        const { error: prodError } = await sb
+            .from("products")
+            .update({ stock: finalStock, sold: finalSold })
+            .eq("id", product.id);
+
+        if (prodError) {
+            alert("Xatolik: " + prodError.message);
+            return;
+        }
+
+    }
+
+    const { error: saleError } = await sb
+        .from("sales")
+        .update({ qty: newQty, sold_price: newPrice })
+        .eq("id", id);
+
+    if (saleError) {
+        alert("Xatolik: " + saleError.message);
+        return;
+    }
+
+    closeEditSaleModal();
+    await renderStats();
+    await renderProductTable();
+    await renderDashboard();
+
+});
+
+async function deleteSale(id) {
+
+    if (!confirm("Ushbu sotuv yozuvini o'chirmoqchimisiz? Mahsulotning ombordagi soni avtomatik tiklanadi.")) return;
+
+    const sale = currentSales.find(s => s.id === id);
+    if (!sale) return;
+
+    const product = getProductById(sale.productId);
+
+    if (product) {
+
+        const restoredStock = product.stock + sale.qty;
+        const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+
+        await sb
+            .from("products")
+            .update({ stock: restoredStock, sold: restoredSold })
+            .eq("id", product.id);
+
+    }
+
+    const { error } = await sb.from("sales").delete().eq("id", id);
+
+    if (error) {
+        alert("Xatolik: " + error.message);
+        return;
+    }
+
+    await renderStats();
+    await renderProductTable();
+    await renderDashboard();
 
 }
 
