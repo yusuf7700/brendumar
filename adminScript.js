@@ -2,9 +2,6 @@
 // UMAR BREND — ADMIN PANEL (SUPABASE)
 // ======================================
 
-let ADMIN_USERNAME = "admin";
-let ADMIN_PASSWORD = "umar2026"; // <-- boshlang'ich login/parol (keyinchalik Sozlamalar orqali o'zgartiriladi)
-
 const loginScreen = document.getElementById("adminLogin");
 const adminApp = document.getElementById("adminApp");
 const loginForm = document.getElementById("loginForm");
@@ -12,39 +9,14 @@ const loginError = document.getElementById("loginError");
 
 
 // ==============================
-// LOGIN/PAROLNI SUPABASE'DAN YUKLASH
+// LOGIN / LOGOUT (Supabase Auth)
 // ==============================
 
-async function loadAdminPassword() {
+async function checkAuth() {
 
-    const { data, error } = await sb
-        .from("admin_settings")
-        .select("username, password")
-        .eq("id", 1)
-        .single();
+    const { data: { session } } = await sb.auth.getSession();
 
-    if (!error && data && data.password) {
-        ADMIN_USERNAME = data.username || ADMIN_USERNAME;
-        ADMIN_PASSWORD = data.password;
-    } else {
-        // Birinchi marta ishga tushganda qatorni yaratib qo'yamiz
-        await sb.from("admin_settings").upsert({
-            id: 1,
-            username: ADMIN_USERNAME,
-            password: ADMIN_PASSWORD
-        });
-    }
-
-}
-
-
-// ==============================
-// LOGIN / LOGOUT
-// ==============================
-
-function checkAuth() {
-
-    if (localStorage.getItem("ub_admin_auth") === "true") {
+    if (session) {
         loginScreen.style.display = "none";
         adminApp.style.display = "flex";
         refreshAll();
@@ -55,62 +27,63 @@ function checkAuth() {
 
 }
 
-loginForm.addEventListener("submit", (e) => {
+loginForm.addEventListener("submit", async (e) => {
 
     e.preventDefault();
 
-    const username = document.getElementById("loginUsername").value;
+    const email = document.getElementById("loginUsername").value.trim();
     const password = document.getElementById("loginPassword").value;
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        localStorage.setItem("ub_admin_auth", "true");
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+        loginError.textContent = "Email yoki parol noto'g'ri";
+        loginError.classList.add("show");
+    } else {
         loginError.classList.remove("show");
         checkAuth();
-    } else {
-        loginError.classList.add("show");
     }
 
 });
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.removeItem("ub_admin_auth");
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await sb.auth.signOut();
     checkAuth();
 });
 
 
 // ==============================
-// SOZLAMALAR — LOGIN VA PAROLNI O'ZGARTIRISH
+// SOZLAMALAR — LOGIN (EMAIL) VA PAROLNI O'ZGARTIRISH
 // ==============================
 
 document.getElementById("settingsForm").addEventListener("submit", async (e) => {
 
     e.preventDefault();
 
-    const currentUsername = document.getElementById("set_current_username").value;
-    const current = document.getElementById("set_current").value;
-    const newUsername = document.getElementById("set_new_username").value.trim();
+    const newEmail = document.getElementById("set_new_username").value.trim();
     const newPass = document.getElementById("set_new").value;
     const confirmPass = document.getElementById("set_confirm").value;
     const msg = document.getElementById("settingsMsg");
 
     msg.className = "settings-msg";
 
-    if (currentUsername !== ADMIN_USERNAME || current !== ADMIN_PASSWORD) {
-        msg.textContent = "Joriy login yoki parol noto'g'ri";
+    if (!newEmail && !newPass) {
+        msg.textContent = "O'zgartiradigan narsa kiritilmadi";
         msg.classList.add("error");
         return;
     }
 
-    if (newPass !== confirmPass) {
+    if (newPass && newPass !== confirmPass) {
         msg.textContent = "Yangi parollar bir-biriga mos kelmadi";
         msg.classList.add("error");
         return;
     }
 
-    const { error } = await sb
-        .from("admin_settings")
-        .update({ username: newUsername, password: newPass })
-        .eq("id", 1);
+    const updates = {};
+    if (newEmail) updates.email = newEmail;
+    if (newPass) updates.password = newPass;
+
+    const { error } = await sb.auth.updateUser(updates);
 
     if (error) {
         msg.textContent = "Xatolik: " + error.message;
@@ -118,9 +91,9 @@ document.getElementById("settingsForm").addEventListener("submit", async (e) => 
         return;
     }
 
-    ADMIN_USERNAME = newUsername;
-    ADMIN_PASSWORD = newPass;
-    msg.textContent = "Login va parol muvaffaqiyatli o'zgartirildi ✅";
+    msg.textContent = newEmail
+        ? "Saqlandi ✅ Email o'zgargan bo'lsa, tasdiqlash uchun yangi manzilingizga xat yuborildi — uni tasdiqlaguningizcha eski email bilan kirasiz."
+        : "Parol muvaffaqiyatli o'zgartirildi ✅";
     msg.classList.add("success");
     document.getElementById("settingsForm").reset();
 
@@ -955,7 +928,4 @@ async function removeReview(id) {
 
 }
 
-(async function initAdmin() {
-    await loadAdminPassword();
-    checkAuth();
-})();
+checkAuth();
