@@ -2,12 +2,34 @@
 // UMAR BREND — ADMIN PANEL (SUPABASE)
 // ======================================
 
-const ADMIN_PASSWORD = "umar2026"; // <-- shu yerda parolni o'zgartiring
+let ADMIN_PASSWORD = "umar2026"; // <-- boshlang'ich parol (keyinchalik Sozlamalar orqali o'zgartiriladi)
 
 const loginScreen = document.getElementById("adminLogin");
 const adminApp = document.getElementById("adminApp");
 const loginForm = document.getElementById("loginForm");
 const loginError = document.getElementById("loginError");
+
+
+// ==============================
+// PAROLNI SUPABASE'DAN YUKLASH
+// ==============================
+
+async function loadAdminPassword() {
+
+    const { data, error } = await sb
+        .from("admin_settings")
+        .select("password")
+        .eq("id", 1)
+        .single();
+
+    if (!error && data && data.password) {
+        ADMIN_PASSWORD = data.password;
+    } else {
+        // Birinchi marta ishga tushganda qatorni yaratib qo'yamiz
+        await sb.from("admin_settings").upsert({ id: 1, password: ADMIN_PASSWORD });
+    }
+
+}
 
 
 // ==============================
@@ -46,6 +68,52 @@ loginForm.addEventListener("submit", (e) => {
 document.getElementById("logoutBtn").addEventListener("click", () => {
     sessionStorage.removeItem("ub_admin_auth");
     checkAuth();
+});
+
+
+// ==============================
+// SOZLAMALAR — PAROLNI O'ZGARTIRISH
+// ==============================
+
+document.getElementById("settingsForm").addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    const current = document.getElementById("set_current").value;
+    const newPass = document.getElementById("set_new").value;
+    const confirmPass = document.getElementById("set_confirm").value;
+    const msg = document.getElementById("settingsMsg");
+
+    msg.className = "settings-msg";
+
+    if (current !== ADMIN_PASSWORD) {
+        msg.textContent = "Joriy parol noto'g'ri";
+        msg.classList.add("error");
+        return;
+    }
+
+    if (newPass !== confirmPass) {
+        msg.textContent = "Yangi parollar bir-biriga mos kelmadi";
+        msg.classList.add("error");
+        return;
+    }
+
+    const { error } = await sb
+        .from("admin_settings")
+        .update({ password: newPass })
+        .eq("id", 1);
+
+    if (error) {
+        msg.textContent = "Xatolik: " + error.message;
+        msg.classList.add("error");
+        return;
+    }
+
+    ADMIN_PASSWORD = newPass;
+    msg.textContent = "Parol muvaffaqiyatli o'zgartirildi ✅";
+    msg.classList.add("success");
+    document.getElementById("settingsForm").reset();
+
 });
 
 
@@ -526,4 +594,7 @@ async function refreshAll() {
     await renderStats();
 }
 
-checkAuth();
+(async function initAdmin() {
+    await loadAdminPassword();
+    checkAuth();
+})();
