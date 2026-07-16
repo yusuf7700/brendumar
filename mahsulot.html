@@ -86,6 +86,49 @@
                 <!-- JS orqali to'ldiriladi -->
             </div>
 
+            <div class="reviews-section" id="reviewsSection" style="display:none;">
+
+                <div class="reviews-summary">
+                    <h2>Mijoz sharhlari</h2>
+                    <div class="rating-overview">
+                        <span class="rating-number" id="ratingAverage">0.0</span>
+                        <div>
+                            <div class="rating-stars" id="ratingStars"></div>
+                            <span class="rating-count" id="ratingCount">0 ta sharh</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="review-form-box">
+
+                    <h3>Sharh qoldiring</h3>
+
+                    <form id="reviewForm">
+
+                        <input type="text" id="rv_name" placeholder="Ismingiz" required>
+
+                        <div class="star-picker" id="starPicker">
+                            <i class="fa-regular fa-star" data-value="1"></i>
+                            <i class="fa-regular fa-star" data-value="2"></i>
+                            <i class="fa-regular fa-star" data-value="3"></i>
+                            <i class="fa-regular fa-star" data-value="4"></i>
+                            <i class="fa-regular fa-star" data-value="5"></i>
+                        </div>
+
+                        <textarea id="rv_comment" rows="3" placeholder="Fikringizni yozing..." required></textarea>
+
+                        <button type="submit" class="btn btn-gold">Yuborish</button>
+
+                        <p id="reviewMsg" class="settings-msg"></p>
+
+                    </form>
+
+                </div>
+
+                <div class="reviews-list" id="reviewsList"></div>
+
+            </div>
+
         </div>
 
     </section>
@@ -301,6 +344,115 @@
             }
 
             render();
+            initReviews(product.id);
+
+            let selectedRating = 0;
+
+            function starIcon(filled) {
+                return filled ? "fa-solid fa-star" : "fa-regular fa-star";
+            }
+
+            function renderStarsHtml(rating) {
+
+                let html = "";
+
+                for (let i = 1; i <= 5; i++) {
+                    html += `<i class="${starIcon(i <= Math.round(rating))}"></i>`;
+                }
+
+                return html;
+
+            }
+
+            async function initReviews(productId) {
+
+                const section = document.getElementById("reviewsSection");
+                section.style.display = "block";
+
+                await refreshReviews(productId);
+
+                const starPicker = document.getElementById("starPicker");
+
+                starPicker.querySelectorAll("i").forEach(star => {
+
+                    star.addEventListener("click", () => {
+
+                        selectedRating = Number(star.dataset.value);
+
+                        starPicker.querySelectorAll("i").forEach(s => {
+                            const val = Number(s.dataset.value);
+                            s.className = val <= selectedRating ? "fa-solid fa-star" : "fa-regular fa-star";
+                        });
+
+                    });
+
+                });
+
+                document.getElementById("reviewForm").addEventListener("submit", async (e) => {
+
+                    e.preventDefault();
+
+                    const msg = document.getElementById("reviewMsg");
+                    msg.className = "settings-msg";
+
+                    if (!selectedRating) {
+                        msg.textContent = "Iltimos, yulduzcha orqali baho bering";
+                        msg.classList.add("error");
+                        return;
+                    }
+
+                    const name = document.getElementById("rv_name").value.trim();
+                    const comment = document.getElementById("rv_comment").value.trim();
+
+                    const ok = await addReview(productId, name, selectedRating, comment);
+
+                    if (!ok) {
+                        msg.textContent = "Xatolik yuz berdi, qayta urinib ko'ring";
+                        msg.classList.add("error");
+                        return;
+                    }
+
+                    document.getElementById("reviewForm").reset();
+                    starPicker.querySelectorAll("i").forEach(s => s.className = "fa-regular fa-star");
+                    selectedRating = 0;
+
+                    msg.textContent = "Rahmat! Sharhingiz qo'shildi ✅";
+                    msg.classList.add("success");
+
+                    await refreshReviews(productId);
+
+                });
+
+            }
+
+            async function refreshReviews(productId) {
+
+                const reviews = await getReviews(productId);
+
+                const avg = reviews.length
+                    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                    : 0;
+
+                document.getElementById("ratingAverage").textContent = avg.toFixed(1);
+                document.getElementById("ratingStars").innerHTML = renderStarsHtml(avg);
+                document.getElementById("ratingCount").textContent = reviews.length + " ta sharh";
+
+                const list = document.getElementById("reviewsList");
+
+                list.innerHTML = reviews.length
+                    ? reviews.map(r => `
+                        <div class="review-item">
+                            <div class="review-item-head">
+                                <strong>${r.name}</strong>
+                                <span class="review-stars">${renderStarsHtml(r.rating)}</span>
+                            </div>
+                            <p>${r.comment || ""}</p>
+                            <span class="review-date">${new Date(r.created_at).toLocaleDateString("uz-UZ")}</span>
+                        </div>
+                    `).join("")
+                    : `<p class="empty-note">Hozircha sharh yo'q. Birinchi bo'lib fikringizni qoldiring!</p>`;
+
+            }
 
         });
 
