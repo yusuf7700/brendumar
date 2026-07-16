@@ -34,7 +34,7 @@
             <h2>🔐 Admin Panel</h2>
             <p>Umar Brend boshqaruv paneliga xush kelibsiz</p>
 
-            <input type="text" id="loginUsername" placeholder="Login" required autocomplete="username">
+            <input type="email" id="loginUsername" placeholder="Email" required autocomplete="username">
             <input type="password" id="loginPassword" placeholder="Parolni kiriting" required autocomplete="current-password">
 
             <button type="submit" class="btn btn-gold">Kirish</button>
@@ -240,24 +240,18 @@
 
                     <div class="admin-panel">
 
-                        <h3>🔐 Login va parolni o'zgartirish</h3>
+                        <h3>🔐 Login (email) va parolni o'zgartirish</h3>
 
                         <form id="settingsForm">
 
-                            <label>Joriy login</label>
-                            <input type="text" id="set_current_username" required>
+                            <label>Yangi email (agar o'zgartirmoqchi bo'lsangiz)</label>
+                            <input type="email" id="set_new_username" placeholder="Bo'sh qoldirsangiz o'zgarmaydi">
 
-                            <label>Joriy parol</label>
-                            <input type="password" id="set_current" required>
-
-                            <label>Yangi login</label>
-                            <input type="text" id="set_new_username" required>
-
-                            <label>Yangi parol</label>
-                            <input type="password" id="set_new" required minlength="4">
+                            <label>Yangi parol (agar o'zgartirmoqchi bo'lsangiz)</label>
+                            <input type="password" id="set_new" placeholder="Bo'sh qoldirsangiz o'zgarmaydi" minlength="6">
 
                             <label>Yangi parolni tasdiqlang</label>
-                            <input type="password" id="set_confirm" required minlength="4">
+                            <input type="password" id="set_confirm" minlength="6">
 
                             <button type="submit" class="btn btn-gold" style="width:100%;margin-top:20px;">
                                 Saqlash
