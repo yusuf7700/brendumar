@@ -205,43 +205,6 @@
             let selectedSize = product.sizes[0];
             let qty = 1;
 
-            const hasColors = product.colors && product.colors.length > 0;
-            let selectedColorIndex = 0;
-
-            function currentColor() {
-                return hasColors ? product.colors[selectedColorIndex] : null;
-            }
-
-            function currentImages() {
-                const color = currentColor();
-                return (color && color.images && color.images.length) ? color.images : product.images;
-            }
-
-            function currentStock() {
-                const color = currentColor();
-                return color ? color.stock : product.stock;
-            }
-
-            function colorsHtml() {
-
-                if (!hasColors) return "";
-
-                return `
-                    <span class="size-label">Rang: <span id="selectedColorName">${product.colors[selectedColorIndex].name}</span></span>
-                    <div class="color-grid" id="colorGrid">
-                        ${product.colors.map((c, i) => `
-                            <button type="button"
-                                class="color-swatch ${i === selectedColorIndex ? "active" : ""}"
-                                style="background:${c.hex || "#ccc"};"
-                                data-index="${i}"
-                                title="${c.name}">
-                            </button>
-                        `).join("")}
-                    </div>
-                `;
-
-            }
-
             function oldPriceHtml() {
 
                 return product.oldPrice
@@ -262,7 +225,7 @@
 
             function thumbsHtml() {
 
-                return currentImages().map((img, i) => `
+                return product.images.map((img, i) => `
                     <div class="detail-thumb ${i === 0 ? "active" : ""}" data-img="${img}">
                         <img src="${img}" alt="${product.name} ${i + 1}">
                     </div>
@@ -276,7 +239,7 @@
 
                     <div class="detail-gallery">
                         <div class="detail-gallery-main">
-                            <img id="mainImage" src="${currentImages()[0]}" alt="${product.name}">
+                            <img id="mainImage" src="${product.images[0]}" alt="${product.name}">
                         </div>
                         <div class="detail-thumbs">${thumbsHtml()}</div>
                     </div>
@@ -292,9 +255,7 @@
                             ${oldPriceHtml()}
                         </div>
 
-                        ${colorsHtml()}
-
-                        <div class="detail-stock">🟢 Qolgan: ${currentStock()} ta</div>
+                        <div class="detail-stock">🟢 Qolgan: ${product.stock} ta</div>
 
                         <p class="detail-desc">${product.description}</p>
 
@@ -351,16 +312,6 @@
 
                 });
 
-                document.querySelectorAll(".color-swatch").forEach(btn => {
-
-                    btn.addEventListener("click", () => {
-                        selectedColorIndex = Number(btn.dataset.index);
-                        qty = 1;
-                        render();
-                    });
-
-                });
-
                 document.querySelectorAll(".size-btn").forEach(btn => {
 
                     btn.addEventListener("click", () => {
@@ -377,18 +328,16 @@
                 });
 
                 document.getElementById("qtyPlus").addEventListener("click", () => {
-                    if (qty < currentStock()) qty++;
+                    if (qty < product.stock) qty++;
                     document.getElementById("qtyValue").textContent = qty;
                 });
 
                 document.getElementById("addToCartBtn").addEventListener("click", () => {
-                    const color = currentColor();
-                    addToCart(product.id, selectedSize, qty, color ? color.name : "");
+                    addToCart(product.id, selectedSize, qty);
                 });
 
                 document.getElementById("orderNowBtn").addEventListener("click", () => {
-                    const color = currentColor();
-                    addToCart(product.id, selectedSize, qty, color ? color.name : "");
+                    addToCart(product.id, selectedSize, qty);
                     openContactModal();
                 });
 
