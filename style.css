@@ -167,6 +167,43 @@ section{
 
 }
 
+.category-filters{
+
+    display:flex;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:40px;
+
+}
+
+.filter-chip{
+
+    padding:10px 24px;
+    border-radius:30px;
+    border:2px solid var(--border);
+    font-weight:600;
+    font-size:14px;
+    color:var(--text);
+    transition:.3s;
+
+}
+
+.filter-chip:hover{
+
+    border-color:var(--gold);
+    color:var(--gold);
+
+}
+
+.filter-chip.active{
+
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#fff;
+
+}
+
 
 /* BUTTON */
 
