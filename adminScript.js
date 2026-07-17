@@ -405,99 +405,10 @@ const productForm = document.getElementById("productForm");
 
 let currentMainImage = "";
 let currentExtraImages = [];
-let currentColors = [];
 
 document.getElementById("addProductBtn").addEventListener("click", () => openProductForm());
 document.getElementById("productModalOverlay").addEventListener("click", closeProductForm);
 document.getElementById("closeProductModal").addEventListener("click", closeProductForm);
-document.getElementById("addColorBtn").addEventListener("click", addColorRow);
-
-
-// ==============================
-// RANGLAR (VARIANTLAR)
-// ==============================
-
-function addColorRow() {
-    currentColors.push({ name: "", hex: "#000000", stock: 0, images: [] });
-    renderColorRows();
-}
-
-function removeColorRow(index) {
-    currentColors.splice(index, 1);
-    renderColorRows();
-    updateStockFieldState();
-}
-
-function updateColorField(index, field, value) {
-    if (field === "stock") value = Number(value) || 0;
-    currentColors[index][field] = value;
-    if (field === "stock") updateStockFieldState();
-}
-
-async function uploadColorImages(index, files) {
-
-    const rows = document.querySelectorAll(".color-row");
-    const preview = rows[index].querySelector(".image-preview");
-    preview.innerHTML = `<span style="font-size:12px;color:var(--gray);">Yuklanmoqda...</span>`;
-
-    const urls = [];
-
-    for (const file of Array.from(files)) {
-        const url = await uploadImageToStorage(file);
-        if (url) urls.push(url);
-    }
-
-    if (urls.length) currentColors[index].images = urls;
-
-    renderColorRows();
-
-}
-
-function renderColorRows() {
-
-    const container = document.getElementById("colorRows");
-
-    container.innerHTML = currentColors.map((color, index) => `
-        <div class="color-row" data-index="${index}">
-            <div class="color-row-fields">
-                <input type="text" placeholder="Rang nomi (masalan: Qora)"
-                    value="${color.name || ""}"
-                    onchange="updateColorField(${index}, 'name', this.value)">
-                <input type="color" value="${color.hex || "#000000"}"
-                    onchange="updateColorField(${index}, 'hex', this.value)">
-                <input type="number" placeholder="Soni" min="0"
-                    value="${color.stock || 0}"
-                    onchange="updateColorField(${index}, 'stock', this.value)">
-                <div class="color-row-images">
-                    <input type="file" accept="image/*" multiple onchange="uploadColorImages(${index}, this.files)">
-                    <div class="image-preview">${(color.images || []).map(img => `<img src="${img}">`).join("")}</div>
-                </div>
-            </div>
-            <button type="button" class="color-row-remove" onclick="removeColorRow(${index})">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    `).join("");
-
-    updateStockFieldState();
-
-}
-
-function updateStockFieldState() {
-
-    const stockInput = document.getElementById("pf_stock");
-
-    if (currentColors.length) {
-        const total = currentColors.reduce((sum, c) => sum + (Number(c.stock) || 0), 0);
-        stockInput.value = total;
-        stockInput.readOnly = true;
-        stockInput.style.opacity = "0.7";
-    } else {
-        stockInput.readOnly = false;
-        stockInput.style.opacity = "1";
-    }
-
-}
 
 function openProductForm(id) {
 
@@ -518,10 +429,8 @@ function openProductForm(id) {
 
     currentMainImage = product ? product.image : "";
     currentExtraImages = product ? [...product.images] : [];
-    currentColors = product && product.colors ? JSON.parse(JSON.stringify(product.colors)) : [];
 
     renderImagePreviews();
-    renderColorRows();
 
     productModal.classList.add("active");
 
@@ -612,13 +521,6 @@ productForm.addEventListener("submit", async (e) => {
     const mainImage = currentMainImage || "assets/products/placeholder.jpg";
     const images = currentExtraImages.length ? currentExtraImages : [mainImage, mainImage, mainImage];
 
-    // Bo'sh rang qatorlarini (nomi kiritilmagan) e'tiborsiz qoldiramiz
-    const validColors = currentColors.filter(c => c.name && c.name.trim());
-
-    const totalStock = validColors.length
-        ? validColors.reduce((sum, c) => sum + (Number(c.stock) || 0), 0)
-        : Number(document.getElementById("pf_stock").value);
-
     const data = {
         name: document.getElementById("pf_name").value.trim(),
         price: Number(document.getElementById("pf_price").value),
@@ -626,11 +528,10 @@ productForm.addEventListener("submit", async (e) => {
         category: document.getElementById("pf_category").value,
         badge: document.getElementById("pf_badge").value,
         sizes,
-        stock: totalStock,
+        stock: Number(document.getElementById("pf_stock").value),
         description: document.getElementById("pf_description").value.trim(),
         image: mainImage,
-        images,
-        colors: validColors
+        images
     };
 
     let error;
@@ -682,30 +583,8 @@ function openSellModal(id) {
         `${product.name} — omborda ${product.stock} ta bor`;
 
     document.getElementById("sell_qty").value = 1;
+    document.getElementById("sell_qty").max = product.stock;
     document.getElementById("sell_price").value = product.price;
-
-    const colorWrap = document.getElementById("sellColorWrap");
-    const colorSelect = document.getElementById("sell_color");
-
-    if (product.colors && product.colors.length) {
-
-        colorWrap.style.display = "block";
-
-        colorSelect.innerHTML = product.colors.map(c => `
-            <option value="${c.name}">${c.name} (${c.stock} ta)</option>
-        `).join("");
-
-        const selectedColorName = colorSelect.value;
-        const selectedColor = product.colors.find(c => c.name === selectedColorName) || product.colors[0];
-        document.getElementById("sell_qty").max = selectedColor ? selectedColor.stock : product.stock;
-
-    } else {
-
-        colorWrap.style.display = "none";
-        colorSelect.innerHTML = "";
-        document.getElementById("sell_qty").max = product.stock;
-
-    }
 
     sellModal.classList.add("active");
 
@@ -726,48 +605,17 @@ sellForm.addEventListener("submit", async (e) => {
     const product = getProductById(id);
     if (!product) return;
 
-    let selectedColorName = "";
-    let updatedColors = null;
-    let newStock;
-
-    if (product.colors && product.colors.length) {
-
-        selectedColorName = document.getElementById("sell_color").value;
-
-        const colorIndex = product.colors.findIndex(c => c.name === selectedColorName);
-        if (colorIndex === -1) return;
-
-        const color = product.colors[colorIndex];
-
-        if (qty < 1 || qty > color.stock) {
-            alert("Noto'g'ri miqdor kiritildi (bu rangdan omborda " + color.stock + " ta bor).");
-            return;
-        }
-
-        updatedColors = JSON.parse(JSON.stringify(product.colors));
-        updatedColors[colorIndex].stock -= qty;
-
-        newStock = updatedColors.reduce((sum, c) => sum + (Number(c.stock) || 0), 0);
-
-    } else {
-
-        if (qty < 1 || qty > product.stock) {
-            alert("Noto'g'ri miqdor kiritildi.");
-            return;
-        }
-
-        newStock = product.stock - qty;
-
+    if (qty < 1 || qty > product.stock) {
+        alert("Noto'g'ri miqdor kiritildi.");
+        return;
     }
 
+    const newStock = product.stock - qty;
     const newSold = (product.sold || 0) + qty;
-
-    const updatePayload = { stock: newStock, sold: newSold };
-    if (updatedColors) updatePayload.colors = updatedColors;
 
     const { error } = await sb
         .from("products")
-        .update(updatePayload)
+        .update({ stock: newStock, sold: newSold })
         .eq("id", id);
 
     if (error) {
@@ -775,7 +623,7 @@ sellForm.addEventListener("submit", async (e) => {
         return;
     }
 
-    await addSale(id, qty, soldPrice, selectedColorName);
+    await addSale(id, qty, soldPrice);
 
     closeSellModal();
     await renderProductTable();
@@ -843,14 +691,13 @@ function renderSalesTable(sales) {
 
         const product = getProductById(s.productId);
         const name = product ? product.name : "(mahsulot o'chirilgan)";
-        const displayName = s.color ? `${name} — ${s.color}` : name;
         const total = s.qty * s.soldPrice;
         const dateStr = new Date(s.date).toLocaleDateString("uz-UZ");
 
         return `
             <div class="sales-row">
                 <span>${dateStr}</span>
-                <span>${displayName}</span>
+                <span>${name}</span>
                 <span>${s.qty} ta</span>
                 <span>${s.soldPrice.toLocaleString()} so'm</span>
                 <span>${total.toLocaleString()} so'm</span>
@@ -919,62 +766,26 @@ editSaleForm.addEventListener("submit", async (e) => {
 
     if (product) {
 
-        if (sale.color && product.colors && product.colors.length) {
+        // avval eski sotuvning ta'sirini bekor qilamiz
+        const restoredStock = product.stock + sale.qty;
+        const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
 
-            const colorIndex = product.colors.findIndex(c => c.name === sale.color);
+        if (newQty > restoredStock) {
+            alert("Buncha ko'p mahsulot omborda yo'q edi. Maksimal: " + restoredStock);
+            return;
+        }
 
-            if (colorIndex !== -1) {
+        const finalStock = restoredStock - newQty;
+        const finalSold = restoredSold + newQty;
 
-                const updatedColors = JSON.parse(JSON.stringify(product.colors));
-                const restoredColorStock = updatedColors[colorIndex].stock + sale.qty;
+        const { error: prodError } = await sb
+            .from("products")
+            .update({ stock: finalStock, sold: finalSold })
+            .eq("id", product.id);
 
-                if (newQty > restoredColorStock) {
-                    alert("Buncha ko'p mahsulot omborda yo'q edi (" + sale.color + "). Maksimal: " + restoredColorStock);
-                    return;
-                }
-
-                updatedColors[colorIndex].stock = restoredColorStock - newQty;
-
-                const finalStock = updatedColors.reduce((sum, c) => sum + (Number(c.stock) || 0), 0);
-                const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
-                const finalSold = restoredSold + newQty;
-
-                const { error: prodError } = await sb
-                    .from("products")
-                    .update({ stock: finalStock, sold: finalSold, colors: updatedColors })
-                    .eq("id", product.id);
-
-                if (prodError) {
-                    alert("Xatolik: " + prodError.message);
-                    return;
-                }
-
-            }
-
-        } else {
-
-            // avval eski sotuvning ta'sirini bekor qilamiz
-            const restoredStock = product.stock + sale.qty;
-            const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
-
-            if (newQty > restoredStock) {
-                alert("Buncha ko'p mahsulot omborda yo'q edi. Maksimal: " + restoredStock);
-                return;
-            }
-
-            const finalStock = restoredStock - newQty;
-            const finalSold = restoredSold + newQty;
-
-            const { error: prodError } = await sb
-                .from("products")
-                .update({ stock: finalStock, sold: finalSold })
-                .eq("id", product.id);
-
-            if (prodError) {
-                alert("Xatolik: " + prodError.message);
-                return;
-            }
-
+        if (prodError) {
+            alert("Xatolik: " + prodError.message);
+            return;
         }
 
     }
@@ -1007,36 +818,13 @@ async function deleteSale(id) {
 
     if (product) {
 
-        if (sale.color && product.colors && product.colors.length) {
+        const restoredStock = product.stock + sale.qty;
+        const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
 
-            const colorIndex = product.colors.findIndex(c => c.name === sale.color);
-
-            if (colorIndex !== -1) {
-
-                const updatedColors = JSON.parse(JSON.stringify(product.colors));
-                updatedColors[colorIndex].stock += sale.qty;
-
-                const finalStock = updatedColors.reduce((sum, c) => sum + (Number(c.stock) || 0), 0);
-                const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
-
-                await sb
-                    .from("products")
-                    .update({ stock: finalStock, sold: restoredSold, colors: updatedColors })
-                    .eq("id", product.id);
-
-            }
-
-        } else {
-
-            const restoredStock = product.stock + sale.qty;
-            const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
-
-            await sb
-                .from("products")
-                .update({ stock: restoredStock, sold: restoredSold })
-                .eq("id", product.id);
-
-        }
+        await sb
+            .from("products")
+            .update({ stock: restoredStock, sold: restoredSold })
+            .eq("id", product.id);
 
     }
 
