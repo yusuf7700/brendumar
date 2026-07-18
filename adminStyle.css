@@ -531,11 +531,12 @@
 .row-actions{
 
     display:flex;
+    align-items:center;
     gap:8px;
 
 }
 
-.row-actions button{
+.row-actions .edit-btn{
 
     width:34px;
     height:34px;
@@ -550,9 +551,58 @@
 
 }
 
+.row-actions .sell-btn{
+
+    height:36px;
+    padding:0 16px;
+
+    border-radius:9px;
+
+    background:#28a745;
+    color:#fff;
+
+    font-size:13px;
+    font-weight:600;
+
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+
+    white-space:nowrap;
+
+    transition:.25s;
+
+}
+
+.row-actions .sell-btn:hover{
+
+    background:#1e8a38;
+    transform:translateY(-1px);
+
+}
+
+.row-actions .delete-btn{
+
+    width:34px;
+    height:34px;
+
+    border-radius:9px;
+
+    background:var(--bg);
+    color:var(--gray);
+
+    font-size:13px;
+
+    margin-left:10px;
+    padding-left:14px;
+    border-left:1px solid var(--border);
+
+    transition:.25s;
+
+}
+
 .row-actions .edit-btn:hover{ color:var(--gold); }
-.row-actions .sell-btn:hover{ color:#28a745; }
-.row-actions .delete-btn:hover{ color:#e63946; }
+.row-actions .delete-btn:hover{ color:#e63946; background:rgba(230,57,70,.08); }
 
 .stock-low{
 
@@ -726,6 +776,44 @@
     gap:10px;
     flex-wrap:wrap;
     margin-top:10px;
+
+}
+
+.size-row{
+
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    align-items:center;
+    gap:10px;
+
+    padding:12px 14px;
+    margin-bottom:10px;
+
+    background:var(--bg);
+    border-radius:12px;
+
+}
+
+.size-row input{
+
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:13px;
+    background:var(--white);
+    color:var(--text);
+
+}
+
+.size-row-remove{
+
+    width:34px;
+    height:34px;
+    flex-shrink:0;
+
+    border-radius:9px;
+    background:var(--white);
+    color:#e63946;
 
 }
 
