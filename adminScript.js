@@ -366,7 +366,7 @@ async function renderProductTable() {
                     <i class="fa-solid fa-pen"></i>
                 </button>
                 <button class="sell-btn" onclick="openSellModal(${p.id})" title="Sotildi">
-                    <i class="fa-solid fa-money-bill-wave"></i>
+                    <i class="fa-solid fa-money-bill-wave"></i> Sotildi
                 </button>
                 <button class="delete-btn" onclick="deleteProduct(${p.id})" title="O'chirish">
                     <i class="fa-solid fa-trash"></i>
@@ -405,10 +405,63 @@ const productForm = document.getElementById("productForm");
 
 let currentMainImage = "";
 let currentExtraImages = [];
+let currentSizes = [];
 
 document.getElementById("addProductBtn").addEventListener("click", () => openProductForm());
 document.getElementById("productModalOverlay").addEventListener("click", closeProductForm);
 document.getElementById("closeProductModal").addEventListener("click", closeProductForm);
+document.getElementById("addSizeBtn").addEventListener("click", addSizeRow);
+
+
+// ==============================
+// RAZMERLAR VA HAR BIRINING SONI
+// ==============================
+
+function addSizeRow() {
+    currentSizes.push({ size: "", stock: 0 });
+    renderSizeRows();
+}
+
+function removeSizeRow(index) {
+    currentSizes.splice(index, 1);
+    renderSizeRows();
+}
+
+function updateSizeField(index, field, value) {
+    value = Number(value) || 0;
+    currentSizes[index][field] = value;
+    if (field === "stock") updateStockFieldState();
+}
+
+function renderSizeRows() {
+
+    const container = document.getElementById("sizeRows");
+
+    container.innerHTML = currentSizes.map((s, index) => `
+        <div class="size-row" data-index="${index}">
+            <input type="number" placeholder="Razmer (masalan: 41)"
+                value="${s.size || ""}"
+                onchange="updateSizeField(${index}, 'size', this.value)">
+            <input type="number" placeholder="Shu razmerdan soni" min="0"
+                value="${s.stock || 0}"
+                onchange="updateSizeField(${index}, 'stock', this.value)">
+            <button type="button" class="size-row-remove" onclick="removeSizeRow(${index})">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    `).join("");
+
+    updateStockFieldState();
+
+}
+
+function updateStockFieldState() {
+
+    const stockInput = document.getElementById("pf_stock");
+    const total = currentSizes.reduce((sum, s) => sum + (Number(s.stock) || 0), 0);
+    stockInput.value = total;
+
+}
 
 function openProductForm(id) {
 
@@ -423,14 +476,14 @@ function openProductForm(id) {
     document.getElementById("pf_oldPrice").value = product ? (product.oldPrice || "") : "";
     document.getElementById("pf_category").value = product ? product.category : "erkak";
     document.getElementById("pf_badge").value = product ? product.badge : "Yangi";
-    document.getElementById("pf_sizes").value = product ? product.sizes.join(",") : "";
-    document.getElementById("pf_stock").value = product ? product.stock : "";
     document.getElementById("pf_description").value = product ? product.description : "";
 
     currentMainImage = product ? product.image : "";
     currentExtraImages = product ? [...product.images] : [];
+    currentSizes = product ? JSON.parse(JSON.stringify(normalizeSizes(product))) : [];
 
     renderImagePreviews();
+    renderSizeRows();
 
     productModal.classList.add("active");
 
@@ -513,10 +566,16 @@ productForm.addEventListener("submit", async (e) => {
 
     const id = document.getElementById("pf_id").value;
 
-    const sizes = document.getElementById("pf_sizes").value
-        .split(",")
-        .map(s => Number(s.trim()))
-        .filter(Boolean);
+    const validSizes = currentSizes
+        .filter(s => s.size)
+        .map(s => ({ size: Number(s.size), stock: Number(s.stock) || 0 }));
+
+    if (!validSizes.length) {
+        alert("Kamida bitta razmer va soni kiritilishi shart.");
+        return;
+    }
+
+    const totalStock = validSizes.reduce((sum, s) => sum + s.stock, 0);
 
     const mainImage = currentMainImage || "assets/products/placeholder.jpg";
     const images = currentExtraImages.length ? currentExtraImages : [mainImage, mainImage, mainImage];
@@ -527,8 +586,8 @@ productForm.addEventListener("submit", async (e) => {
         old_price: Number(document.getElementById("pf_oldPrice").value) || 0,
         category: document.getElementById("pf_category").value,
         badge: document.getElementById("pf_badge").value,
-        sizes,
-        stock: Number(document.getElementById("pf_stock").value),
+        sizes: validSizes,
+        stock: totalStock,
         description: document.getElementById("pf_description").value.trim(),
         image: mainImage,
         images
@@ -578,17 +637,46 @@ function openSellModal(id) {
     const product = getProductById(id);
     if (!product) return;
 
+    const sizes = normalizeSizes(product).filter(s => s.stock > 0);
+
     document.getElementById("sell_id").value = product.id;
     document.getElementById("sellProductName").textContent =
         `${product.name} — omborda ${product.stock} ta bor`;
 
+    const sizeSelect = document.getElementById("sell_size");
+
+    if (!sizes.length) {
+        sizeSelect.innerHTML = `<option value="">Hech qaysi razmerda mahsulot yo'q</option>`;
+    } else {
+        sizeSelect.innerHTML = sizes.map(s => `
+            <option value="${s.size}">${s.size} razmer (${s.stock} ta)</option>
+        `).join("");
+    }
+
     document.getElementById("sell_qty").value = 1;
-    document.getElementById("sell_qty").max = product.stock;
     document.getElementById("sell_price").value = product.price;
+
+    updateSellQtyMax();
 
     sellModal.classList.add("active");
 
 }
+
+function updateSellQtyMax() {
+
+    const id = Number(document.getElementById("sell_id").value);
+    const product = getProductById(id);
+    if (!product) return;
+
+    const selectedSize = Number(document.getElementById("sell_size").value);
+    const sizes = normalizeSizes(product);
+    const sizeEntry = sizes.find(s => s.size === selectedSize);
+
+    document.getElementById("sell_qty").max = sizeEntry ? sizeEntry.stock : 1;
+
+}
+
+document.getElementById("sell_size").addEventListener("change", updateSellQtyMax);
 
 function closeSellModal() {
     sellModal.classList.remove("active");
@@ -601,21 +689,33 @@ sellForm.addEventListener("submit", async (e) => {
     const id = Number(document.getElementById("sell_id").value);
     const qty = Number(document.getElementById("sell_qty").value);
     const soldPrice = Number(document.getElementById("sell_price").value);
+    const selectedSize = Number(document.getElementById("sell_size").value);
 
     const product = getProductById(id);
     if (!product) return;
 
-    if (qty < 1 || qty > product.stock) {
+    if (!selectedSize) {
+        alert("Razmer tanlanmagan yoki bu mahsulotda omborda hech narsa yo'q.");
+        return;
+    }
+
+    const sizes = normalizeSizes(product);
+    const sizeIndex = sizes.findIndex(s => s.size === selectedSize);
+
+    if (sizeIndex === -1 || qty < 1 || qty > sizes[sizeIndex].stock) {
         alert("Noto'g'ri miqdor kiritildi.");
         return;
     }
 
-    const newStock = product.stock - qty;
+    const updatedSizes = JSON.parse(JSON.stringify(sizes));
+    updatedSizes[sizeIndex].stock -= qty;
+
+    const newStock = updatedSizes.reduce((sum, s) => sum + s.stock, 0);
     const newSold = (product.sold || 0) + qty;
 
     const { error } = await sb
         .from("products")
-        .update({ stock: newStock, sold: newSold })
+        .update({ stock: newStock, sold: newSold, sizes: updatedSizes })
         .eq("id", id);
 
     if (error) {
@@ -623,7 +723,7 @@ sellForm.addEventListener("submit", async (e) => {
         return;
     }
 
-    await addSale(id, qty, soldPrice);
+    await addSale(id, qty, soldPrice, selectedSize);
 
     closeSellModal();
     await renderProductTable();
@@ -691,13 +791,14 @@ function renderSalesTable(sales) {
 
         const product = getProductById(s.productId);
         const name = product ? product.name : "(mahsulot o'chirilgan)";
+        const displayName = s.size ? `${name} — ${s.size} razmer` : name;
         const total = s.qty * s.soldPrice;
         const dateStr = new Date(s.date).toLocaleDateString("uz-UZ");
 
         return `
             <div class="sales-row">
                 <span>${dateStr}</span>
-                <span>${name}</span>
+                <span>${displayName}</span>
                 <span>${s.qty} ta</span>
                 <span>${s.soldPrice.toLocaleString()} so'm</span>
                 <span>${total.toLocaleString()} so'm</span>
@@ -766,26 +867,59 @@ editSaleForm.addEventListener("submit", async (e) => {
 
     if (product) {
 
-        // avval eski sotuvning ta'sirini bekor qilamiz
-        const restoredStock = product.stock + sale.qty;
-        const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+        const sizes = normalizeSizes(product);
+        const sizeIndex = sale.size ? sizes.findIndex(s => s.size === sale.size) : -1;
 
-        if (newQty > restoredStock) {
-            alert("Buncha ko'p mahsulot omborda yo'q edi. Maksimal: " + restoredStock);
-            return;
-        }
+        if (sizeIndex !== -1) {
 
-        const finalStock = restoredStock - newQty;
-        const finalSold = restoredSold + newQty;
+            const updatedSizes = JSON.parse(JSON.stringify(sizes));
+            const restoredSizeStock = updatedSizes[sizeIndex].stock + sale.qty;
 
-        const { error: prodError } = await sb
-            .from("products")
-            .update({ stock: finalStock, sold: finalSold })
-            .eq("id", product.id);
+            if (newQty > restoredSizeStock) {
+                alert("Buncha ko'p mahsulot omborda yo'q edi (" + sale.size + " razmer). Maksimal: " + restoredSizeStock);
+                return;
+            }
 
-        if (prodError) {
-            alert("Xatolik: " + prodError.message);
-            return;
+            updatedSizes[sizeIndex].stock = restoredSizeStock - newQty;
+
+            const finalStock = updatedSizes.reduce((sum, s) => sum + s.stock, 0);
+            const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+            const finalSold = restoredSold + newQty;
+
+            const { error: prodError } = await sb
+                .from("products")
+                .update({ stock: finalStock, sold: finalSold, sizes: updatedSizes })
+                .eq("id", product.id);
+
+            if (prodError) {
+                alert("Xatolik: " + prodError.message);
+                return;
+            }
+
+        } else {
+
+            // avval eski sotuvning ta'sirini bekor qilamiz (razmer ma'lumoti yo'q eski yozuvlar uchun)
+            const restoredStock = product.stock + sale.qty;
+            const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+
+            if (newQty > restoredStock) {
+                alert("Buncha ko'p mahsulot omborda yo'q edi. Maksimal: " + restoredStock);
+                return;
+            }
+
+            const finalStock = restoredStock - newQty;
+            const finalSold = restoredSold + newQty;
+
+            const { error: prodError } = await sb
+                .from("products")
+                .update({ stock: finalStock, sold: finalSold })
+                .eq("id", product.id);
+
+            if (prodError) {
+                alert("Xatolik: " + prodError.message);
+                return;
+            }
+
         }
 
     }
@@ -818,13 +952,33 @@ async function deleteSale(id) {
 
     if (product) {
 
-        const restoredStock = product.stock + sale.qty;
-        const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+        const sizes = normalizeSizes(product);
+        const sizeIndex = sale.size ? sizes.findIndex(s => s.size === sale.size) : -1;
 
-        await sb
-            .from("products")
-            .update({ stock: restoredStock, sold: restoredSold })
-            .eq("id", product.id);
+        if (sizeIndex !== -1) {
+
+            const updatedSizes = JSON.parse(JSON.stringify(sizes));
+            updatedSizes[sizeIndex].stock += sale.qty;
+
+            const finalStock = updatedSizes.reduce((sum, s) => sum + s.stock, 0);
+            const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+
+            await sb
+                .from("products")
+                .update({ stock: finalStock, sold: restoredSold, sizes: updatedSizes })
+                .eq("id", product.id);
+
+        } else {
+
+            const restoredStock = product.stock + sale.qty;
+            const restoredSold = Math.max(0, (product.sold || 0) - sale.qty);
+
+            await sb
+                .from("products")
+                .update({ stock: restoredStock, sold: restoredSold })
+                .eq("id", product.id);
+
+        }
 
     }
 
