@@ -202,8 +202,15 @@
 
             incrementProductViews(product);
 
-            let selectedSize = product.sizes[0];
+            const sizesData = normalizeSizes(product);
+            const firstAvailable = sizesData.find(s => s.stock > 0);
+            let selectedSize = firstAvailable ? firstAvailable.size : (sizesData[0] ? sizesData[0].size : null);
             let qty = 1;
+
+            function getSizeStock(size) {
+                const entry = sizesData.find(s => s.size === size);
+                return entry ? entry.stock : 0;
+            }
 
             function oldPriceHtml() {
 
@@ -215,9 +222,12 @@
 
             function sizesHtml() {
 
-                return product.sizes.map(size => `
-                    <button class="size-btn ${size === selectedSize ? "active" : ""}" data-size="${size}">
-                        ${size}
+                return sizesData.map(s => `
+                    <button class="size-btn ${s.size === selectedSize ? "active" : ""} ${s.stock <= 0 ? "disabled" : ""}"
+                        data-size="${s.size}"
+                        ${s.stock <= 0 ? "disabled" : ""}
+                        title="${s.stock > 0 ? s.stock + " ta bor" : "Tugagan"}">
+                        ${s.size}
                     </button>
                 `).join("");
 
@@ -234,6 +244,8 @@
             }
 
             function render() {
+
+                const selectedStock = getSizeStock(selectedSize);
 
                 root.innerHTML = `
 
@@ -255,7 +267,11 @@
                             ${oldPriceHtml()}
                         </div>
 
-                        <div class="detail-stock">🟢 Qolgan: ${product.stock} ta</div>
+                        <div class="detail-stock">
+                            ${selectedStock > 0
+                                ? `🟢 Tanlangan razmerda qolgan: ${selectedStock} ta`
+                                : `🔴 Bu razmer tugagan`}
+                        </div>
 
                         <p class="detail-desc">${product.description}</p>
 
@@ -315,9 +331,10 @@
                 document.querySelectorAll(".size-btn").forEach(btn => {
 
                     btn.addEventListener("click", () => {
+                        if (btn.disabled) return;
                         selectedSize = Number(btn.dataset.size);
-                        document.querySelectorAll(".size-btn").forEach(b => b.classList.remove("active"));
-                        btn.classList.add("active");
+                        qty = 1;
+                        render();
                     });
 
                 });
@@ -328,15 +345,23 @@
                 });
 
                 document.getElementById("qtyPlus").addEventListener("click", () => {
-                    if (qty < product.stock) qty++;
+                    if (qty < getSizeStock(selectedSize)) qty++;
                     document.getElementById("qtyValue").textContent = qty;
                 });
 
                 document.getElementById("addToCartBtn").addEventListener("click", () => {
+                    if (getSizeStock(selectedSize) <= 0) {
+                        alert("Bu razmer hozircha tugagan.");
+                        return;
+                    }
                     addToCart(product.id, selectedSize, qty);
                 });
 
                 document.getElementById("orderNowBtn").addEventListener("click", () => {
+                    if (getSizeStock(selectedSize) <= 0) {
+                        alert("Bu razmer hozircha tugagan.");
+                        return;
+                    }
                     addToCart(product.id, selectedSize, qty);
                     openContactModal();
                 });
